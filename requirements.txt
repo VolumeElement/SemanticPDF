@@ -3,3 +3,4 @@ pytesseract
 pdf2image
 nltk
 gensim
+scikit-learn
