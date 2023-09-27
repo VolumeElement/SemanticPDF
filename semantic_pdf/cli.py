@@ -1,11 +1,8 @@
-import os
-
+import click
 from embedding import extract_text_for_sempdfs
 from hashing import hash_files
-from mydatabase import SemPdf
-from myio import load_data, write_data
+from mydatabase import SemPdf, load_data, write_data
 from search import search_pdf_files
-from utils import constants
 
 
 def invert_mapping(data_list):
@@ -27,16 +24,33 @@ def invert_mapping(data_list):
     return inverted_map
 
 
-print("Loading file list...")
-file_list = search_pdf_files()
-print("Hashing files...")
-file_hashes = hash_files(file_list)
-print("Inverting hashes map...")
-inverted_hashes_map = invert_mapping(file_hashes)
+@click.command()
+@click.option(
+    "-s", "--skip", is_flag=True, default=False, help="Don't search for new pdfs."
+)
+def cli(skip):
+    if skip:
+        print("Loading data from file...")
+        sempdfs = load_data()
+    else:
+        print("Loading file list...")
+        file_list = search_pdf_files()
+        print("Hashing files...")
+        file_hashes = hash_files(file_list)
+        print("Inverting hashes map...")
+        inverted_hashes_map = invert_mapping(file_hashes)
 
-print("Extracting text from PDFs...")
-for _, sempdf in inverted_hashes_map.items():
-    print(f"Extracting {sempdf.paths[0]}")
-    extract_text_for_sempdfs(sempdf)
+        print("Extracting text from PDFs...")
+        for _, sempdf in inverted_hashes_map.items():
+            print(f"Extracting {sempdf.paths[0]}")
+            extract_text_for_sempdfs(sempdf)
 
-print(inverted_hashes_map)
+        print("Writing data to file...")
+        write_data(inverted_hashes_map.values())
+        sempdfs = inverted_hashes_map.values()
+
+    print(sempdfs)
+
+
+if __name__ == "__main__":
+    cli()
