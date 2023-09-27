@@ -9,12 +9,14 @@ from utils import config, constants
 class SemPdf:
     hash: str
     text: str
+    cleaned_text: list[str]
     paths: list[str]
 
-    def __init__(self, hash, text=None, paths=[]):
+    def __init__(self, hash, text=None, paths=[], cleaned_text=[]):
         self.paths = paths
         self.text = text
         self.hash = hash
+        self.cleaned_text = cleaned_text
 
 
 def load_data():

@@ -1,5 +1,6 @@
 import click
-from embedding import extract_text_for_sempdfs
+from cleaning import clean_text
+from extraction import extract_text_for_sempdfs
 from hashing import hash_files
 from mydatabase import SemPdf, load_data, write_data
 from search import search_pdf_files
@@ -49,7 +50,11 @@ def cli(skip):
         write_data(inverted_hashes_map.values())
         sempdfs = inverted_hashes_map.values()
 
-    print(sempdfs)
+    print("Cleaning text...")
+    for sempdf in sempdfs:
+        sempdf.cleaned_text = clean_text(sempdf.text)
+
+    write_data(sempdfs)
 
 
 if __name__ == "__main__":

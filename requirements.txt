@@ -1,3 +1,5 @@
 PyYaml
 pytesseract
 pdf2image
+nltk
+gensim
