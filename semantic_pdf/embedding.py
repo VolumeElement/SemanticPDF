@@ -1,4 +1,14 @@
-def train_word2vec(sentences, size=100, window=5, min_count=1, workers=4):
+import os
+from pickle import dump, load
+
+from gensim.models import Word2Vec
+from mydatabase import SemPdf
+from utils import config, constants
+
+MODEL_PATH = os.path.join(config.database_path, constants.WORD2VEC_MODEL_FILENAME)
+
+
+def train_word2vec(sempdfs: list[SemPdf], size=100, window=5, min_count=1, workers=4):
     """
     Train a Word2Vec model on the given sentences.
 
@@ -9,13 +19,42 @@ def train_word2vec(sentences, size=100, window=5, min_count=1, workers=4):
     Returns:
     - Word2Vec: Trained Word2Vec model.
     """
+    cleaned_texts = [sempdf.cleaned_text for sempdf in sempdfs if sempdf.cleaned_text]
+
     model = Word2Vec(
-        sentences, vector_size=size, window=window, min_count=min_count, workers=workers
+        cleaned_texts,
+        vector_size=size,
+        window=window,
+        min_count=min_count,
+        workers=workers,
     )
     return model
 
 
-def process_sempdfs(sempdfs):
+def save_word2vec(model):
+    """
+    Save a Word2Vec model to disk.
+
+    Args:
+    - model (Word2Vec): Trained Word2Vec model.
+    """
+    with open(MODEL_PATH, "wb") as f:
+        dump(model, f)
+
+
+def load_word2vec():
+    """
+    Load a Word2Vec model from disk.
+
+    Returns:
+    - Word2Vec: Trained Word2Vec model.
+    """
+    with open(MODEL_PATH, "rb") as f:
+        model = load(f)
+    return model
+
+
+def embed_sempdfs(sempdfs):
     """
     Iterate through each SemPdf, clean and embed the text.
 
@@ -25,21 +64,14 @@ def process_sempdfs(sempdfs):
     Returns:
     - list[SemPdf]: Processed list of SemPdf dataclass instances.
     """
-    cleaned_texts = [clean_text(sempdf.text) for sempdf in sempdfs if sempdf.text]
-
-    # Train Word2Vec model on cleaned text
-    model = train_word2vec(cleaned_texts)
 
     for sempdf in sempdfs:
-        if sempdf.text:
-            cleaned_text = clean_text(sempdf.text)
+        if sempdf.cleaned_text:
             embedded_text = [
                 model.wv[word].tolist()
-                for word in cleaned_text
+                for word in sempdf.cleaned_text
                 if word in model.wv.index_to_key
             ]
-            sempdf.text = (
-                embedded_text  # Update the text field with embedded representation
-            )
+            sempdf.embedded_text = embedded_text
 
     return sempdfs

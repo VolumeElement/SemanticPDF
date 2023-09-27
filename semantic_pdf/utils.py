@@ -22,6 +22,7 @@ config = Config()
 class Constants:
     BUF_SIZE: int = 65536
     INVERTED_HASHES_MAP_FILENAME: str = "inverted_hashes_map.json"
+    WORD2VEC_MODEL_FILENAME: str = "word2vec.model"
 
 
 constants = Constants()

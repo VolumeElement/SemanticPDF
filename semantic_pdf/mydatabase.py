@@ -11,12 +11,16 @@ class SemPdf:
     text: str
     cleaned_text: list[str]
     paths: list[str]
+    embedded_text: str
 
-    def __init__(self, hash, text=None, paths=[], cleaned_text=[]):
+    def __init__(
+        self, hash=None, text=None, paths=[], cleaned_text=[], embedded_text=None
+    ):
         self.paths = paths
         self.text = text
         self.hash = hash
         self.cleaned_text = cleaned_text
+        self.embedded_text = embedded_text
 
 
 def load_data():

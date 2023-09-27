@@ -1,9 +1,18 @@
 import click
+import numpy as np
 from cleaning import clean_text
+from embedding import embed_sempdfs, save_word2vec, train_word2vec
 from extraction import extract_text_for_sempdfs
 from hashing import hash_files
 from mydatabase import SemPdf, load_data, write_data
 from search import search_pdf_files
+from sklearn.metrics.pairwise import cosine_similarity
+from utils import config, constants
+
+
+@click.group()
+def cli():
+    pass
 
 
 def invert_mapping(data_list):
@@ -25,11 +34,11 @@ def invert_mapping(data_list):
     return inverted_map
 
 
-@click.command()
+@cli.command()
 @click.option(
     "-s", "--skip", is_flag=True, default=False, help="Don't search for new pdfs."
 )
-def cli(skip):
+def init(skip):
     if skip:
         print("Loading data from file...")
         sempdfs = load_data()
@@ -47,14 +56,70 @@ def cli(skip):
             extract_text_for_sempdfs(sempdf)
 
         print("Writing data to file...")
-        write_data(inverted_hashes_map.values())
         sempdfs = inverted_hashes_map.values()
 
-    print("Cleaning text...")
-    for sempdf in sempdfs:
-        sempdf.cleaned_text = clean_text(sempdf.text)
+        print("Cleaning text...")
+        for sempdf in sempdfs:
+            sempdf.cleaned_text = clean_text(sempdf.text)
 
-    write_data(sempdfs)
+        write_data(sempdf)
+
+    print("training word2vec model...")
+    model = train_word2vec(sempdfs)
+    print("Saving word2vec model...")
+    save_word2vec(model)
+
+    # print("Embedding text...")
+    # sempdfs = embed_sempdfs(sempdfs)
+    # write_data(sempdfs)
+
+
+@cli.command()
+@click.argument("query", type=str)
+@click.option("-n", "--num", type=int, default=3, help="Number of results to return.")
+def search(query, num):
+    """
+    Search for the top N closest articles based on a given string.
+
+    Args:
+    - query (str): Query string to search.
+
+    Returns:
+    - list[SemPdf]: Top N closest SemPdf dataclass instances.
+    """
+
+    import os
+
+    if not os.path.exists(
+        os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
+    ):
+        print("Please run `init` first.")
+        return
+
+    sempdfs = load_data()
+
+    # Convert the query into an embedding
+    cleaned_query = SemPdf(cleaned_text=clean_text(query))
+    query_embedding = embed_sempdfs([cleaned_query])[0].embedded_text
+
+    # If the cleaned query is empty or has words that are not in our Word2Vec model, return an empty list
+    if not query_embedding:
+        return []
+
+    # Compute an averaged vector for each SemPdf's text
+    document_embeddings = [
+        np.mean(np.array(sempdf.text), axis=0).tolist() for sempdf in sempdfs
+    ]
+
+    # Compute cosine similarities
+    similarities = cosine_similarity(query_embedding, document_embeddings)[0]
+
+    # Get indices of top N articles
+    search_num = min(num, len(similarities))
+    top_indices = np.argsort(similarities)[-search_num:][::-1]
+
+    # Return top 3 articles
+    return [sempdfs[i].paths for i in top_indices]
 
 
 if __name__ == "__main__":
