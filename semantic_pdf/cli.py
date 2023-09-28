@@ -39,7 +39,6 @@ def invert_mapping(data_list):
 
 
 def init():
-    # TODO: delete old paths
     _init = True
     if os.path.exists(
         os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
@@ -55,6 +54,16 @@ def init():
     file_hashes = hash_files(file_list)
     print("Inverting hashes map...")
     inverted_hashes_map = invert_mapping(file_hashes)
+
+    paths_updated = False
+    # update sempdfs paths
+    for sempdf in sempdfs:
+        if sempdf.paths != inverted_hashes_map[sempdf.hash].paths:
+            paths_updated = True
+            sempdf.paths = inverted_hashes_map[sempdf.hash].paths
+    if paths_updated:
+        print("Updating paths...")
+        write_data(sempdfs)
 
     delta_sempdfs = []
     negative_delta_sempdfs = []
