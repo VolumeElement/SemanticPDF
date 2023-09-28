@@ -1,3 +1,5 @@
+import os
+
 import click
 import numpy as np
 from cleaning import clean_text
@@ -36,40 +38,33 @@ def invert_mapping(data_list):
     return inverted_map
 
 
-@cli.command()
-@click.option(
-    "-s", "--skip", is_flag=True, default=False, help="Don't search for new pdfs."
-)
-def init(skip):
-    if skip:
-        print("Loading data from file...")
-        sempdfs = load_data()
-    else:
-        print("Loading file list...")
-        file_list = search_pdf_files()
-        print("Hashing files...")
-        file_hashes = hash_files(file_list)
-        print("Inverting hashes map...")
-        inverted_hashes_map = invert_mapping(file_hashes)
+def init():
+    print("Loading data from file...")
+    sempdfs = load_data()
 
-        print("Extracting text from PDFs...")
-        for _, sempdf in inverted_hashes_map.items():
-            print(f"Extracting {sempdf.paths[0]}")
-            extract_text_for_sempdfs(sempdf)
+    print("Loading file list...")
+    file_list = search_pdf_files()
+    print("Hashing files...")
+    file_hashes = hash_files(file_list)
+    print("Inverting hashes map...")
+    inverted_hashes_map = invert_mapping(file_hashes)
 
-        print("Writing data to file...")
-        sempdfs = inverted_hashes_map.values()
+    print("Extracting text from PDFs...")
+    for _, sempdf in inverted_hashes_map.items():
+        print(f"Extracting {sempdf.paths[0]}")
+        extract_text_for_sempdfs(sempdf)
 
-        print("Cleaning text...")
-        for sempdf in sempdfs:
-            sempdf.cleaned_text = clean_text(sempdf.text)
+    print("Writing data to file...")
+    sempdfs = inverted_hashes_map.values()
 
-        write_data(sempdfs)
+    print("Cleaning text...")
+    for sempdf in sempdfs:
+        sempdf.cleaned_text = clean_text(sempdf.text)
 
-        print("training word2vec model...")
-        model = train_word2vec(sempdfs)
-        print("Saving word2vec model...")
-        save_word2vec(model)
+    print("training word2vec model...")
+    model = train_word2vec(sempdfs)
+    print("Saving word2vec model...")
+    save_word2vec(model)
 
     model = load_word2vec()
 
@@ -81,7 +76,10 @@ def init(skip):
 @cli.command()
 @click.argument("query", type=str)
 @click.option("-n", "--num", type=int, default=3, help="Number of results to return.")
-def search(query, num):
+@click.option(
+    "-s", "--skip", is_flag=True, default=False, help="Don't search for new pdfs."
+)
+def search(query, num, skip):
     """
     Search for the top N closest articles based on a given string.
 
@@ -92,8 +90,8 @@ def search(query, num):
     - list[SemPdf]: Top N closest SemPdf dataclass instances.
     """
 
-    import os
-
+    if not skip:
+        init()
     if not os.path.exists(
         os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
     ):
