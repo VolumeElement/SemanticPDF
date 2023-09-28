@@ -1,6 +1,7 @@
 import os
 from pickle import dump, load
 
+import numpy as np
 from gensim.models import Word2Vec
 from mydatabase import SemPdf
 from utils import config, constants
@@ -54,7 +55,7 @@ def load_word2vec():
     return model
 
 
-def embed_sempdfs(sempdfs):
+def embed_sempdfs(sempdfs, model):
     """
     Iterate through each SemPdf, clean and embed the text.
 
@@ -72,6 +73,6 @@ def embed_sempdfs(sempdfs):
                 for word in sempdf.cleaned_text
                 if word in model.wv.index_to_key
             ]
-            sempdf.embedded_text = embedded_text
+            sempdf.embedded_vec = np.mean(np.array(embedded_text), axis=0).tolist()
 
     return sempdfs

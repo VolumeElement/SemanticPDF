@@ -1,7 +1,7 @@
 import click
 import numpy as np
 from cleaning import clean_text
-from embedding import embed_sempdfs, save_word2vec, train_word2vec
+from embedding import embed_sempdfs, load_word2vec, save_word2vec, train_word2vec
 from extraction import extract_text_for_sempdfs
 from hashing import hash_files
 from mydatabase import SemPdf, load_data, write_data
@@ -27,10 +27,12 @@ def invert_mapping(data_list):
     """
     inverted_map = {}
     for path, hash_val in data_list:
+        print(path, hash_val)
         if hash_val not in inverted_map:
-            inverted_map[hash_val]: SemPdf = SemPdf(hash_val)
+            inverted_map[hash_val]: SemPdf = SemPdf(hash=hash_val)
 
-        inverted_map[hash_val].paths.append(path)
+        if path not in inverted_map[hash_val].paths:
+            inverted_map[hash_val].paths.append(path)
     return inverted_map
 
 
@@ -62,16 +64,18 @@ def init(skip):
         for sempdf in sempdfs:
             sempdf.cleaned_text = clean_text(sempdf.text)
 
-        write_data(sempdf)
+        write_data(sempdfs)
 
-    print("training word2vec model...")
-    model = train_word2vec(sempdfs)
-    print("Saving word2vec model...")
-    save_word2vec(model)
+        print("training word2vec model...")
+        model = train_word2vec(sempdfs)
+        print("Saving word2vec model...")
+        save_word2vec(model)
 
-    # print("Embedding text...")
-    # sempdfs = embed_sempdfs(sempdfs)
-    # write_data(sempdfs)
+    model = load_word2vec()
+
+    print("Embedding text...")
+    sempdfs = embed_sempdfs(sempdfs, model)
+    write_data(sempdfs)
 
 
 @cli.command()
