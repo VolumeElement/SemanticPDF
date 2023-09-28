@@ -2,7 +2,7 @@ import os
 
 import click
 import numpy as np
-from cleaning import clean_text
+from cleaning import clean_sempdfs, clean_text
 from embedding import embed_sempdfs, load_word2vec, save_word2vec, train_word2vec
 from extraction import extract_text_for_sempdfs
 from hashing import hash_files
@@ -39,8 +39,15 @@ def invert_mapping(data_list):
 
 
 def init():
-    print("Loading data from file...")
-    sempdfs = load_data()
+    # TODO: delete old paths
+    _init = True
+    if os.path.exists(
+        os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
+    ):
+        _init = False
+
+        print("Loading data from file...")
+        sempdfs = load_data()
 
     print("Loading file list...")
     file_list = search_pdf_files()
@@ -49,17 +56,38 @@ def init():
     print("Inverting hashes map...")
     inverted_hashes_map = invert_mapping(file_hashes)
 
-    print("Extracting text from PDFs...")
-    for _, sempdf in inverted_hashes_map.items():
-        print(f"Extracting {sempdf.paths[0]}")
-        extract_text_for_sempdfs(sempdf)
+    delta_sempdfs = []
+    negative_delta_sempdfs = []
+    if _init:
+        delta_sempdfs = inverted_hashes_map.values()
+    else:
+        # What hashes are new?
+        for hash_val, sempdf in inverted_hashes_map.items():
+            if hash_val not in [sempdf.hash for sempdf in sempdfs]:
+                delta_sempdfs.append(sempdf)
 
-    print("Writing data to file...")
-    sempdfs = inverted_hashes_map.values()
+        # What hashes are no longer available?
+        for sempdf in sempdfs:
+            if sempdf.hash not in inverted_hashes_map:
+                negative_delta_sempdfs.append(sempdf)
 
-    print("Cleaning text...")
-    for sempdf in sempdfs:
-        sempdf.cleaned_text = clean_text(sempdf.text)
+    if len(delta_sempdfs) + len(negative_delta_sempdfs) == 0:
+        print("No new files found.")
+        return
+
+    if delta_sempdfs:
+        print("Extracting text from PDFs...")
+        delta_sempdfs = extract_text_for_sempdfs(delta_sempdfs)
+
+        print("Cleaning text...")
+        delta_sempdfs = clean_sempdfs(delta_sempdfs)
+        sempdfs.extend(delta_sempdfs)
+
+    if negative_delta_sempdfs:
+        print("Removing old hashes...")
+        # Remove hashes that are no longer available
+        for sempdf in negative_delta_sempdfs:
+            sempdfs.remove(sempdf)
 
     print("training word2vec model...")
     model = train_word2vec(sempdfs)

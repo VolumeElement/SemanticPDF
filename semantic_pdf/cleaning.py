@@ -39,3 +39,9 @@ def clean_text(text):
     words = [word for word in words if word not in stop_words]
 
     return words
+
+
+def clean_sempdfs(sempdfs):
+    for sempdf in sempdfs:
+        sempdf.cleaned_text = clean_text(sempdf.text)
+    return sempdfs

@@ -1,4 +1,5 @@
 import pytesseract
+from mydatabase import SemPdf
 from pdf2image import convert_from_path
 
 
@@ -16,5 +17,7 @@ def extract_text_from_pdf(pdf_path):
     return text_data
 
 
-def extract_text_for_sempdfs(sempdf):
-    sempdf.text = extract_text_from_pdf(sempdf.paths[0])
+def extract_text_for_sempdfs(sempdfs: list[SemPdf]):
+    for sempdf in sempdfs:
+        sempdf.text = extract_text_from_pdf(sempdf.paths[0])
+    return sempdfs
