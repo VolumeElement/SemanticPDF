@@ -101,29 +101,30 @@ def search(query, num):
         return
 
     sempdfs = load_data()
+    model = load_word2vec()
 
     # Convert the query into an embedding
     cleaned_query = SemPdf(cleaned_text=clean_text(query))
-    query_embedding = embed_sempdfs([cleaned_query])[0].embedded_text
+    query_embedding = embed_sempdfs([cleaned_query], model)[0].embedded_vec
 
     # If the cleaned query is empty or has words that are not in our Word2Vec model, return an empty list
     if not query_embedding:
         return []
 
     # Compute an averaged vector for each SemPdf's text
-    document_embeddings = [
-        np.mean(np.array(sempdf.text), axis=0).tolist() for sempdf in sempdfs
-    ]
+    document_embeddings = [sempdf.embedded_vec for sempdf in sempdfs]
 
     # Compute cosine similarities
-    similarities = cosine_similarity(query_embedding, document_embeddings)[0]
+    similarities = cosine_similarity([query_embedding], document_embeddings)[0]
 
     # Get indices of top N articles
     search_num = min(num, len(similarities))
     top_indices = np.argsort(similarities)[-search_num:][::-1]
 
-    # Return top 3 articles
-    return [sempdfs[i].paths for i in top_indices]
+    # Return top N articles
+    print("Top results:")
+    for i in top_indices:
+        print(f"{sempdfs[i].paths[0]}: {similarities[i]}")
 
 
 if __name__ == "__main__":
