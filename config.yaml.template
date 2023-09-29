@@ -1,1 +1,2 @@
 pdf_search_path: /path/to/pdf/files
+database_path: /path/to/database/directory
