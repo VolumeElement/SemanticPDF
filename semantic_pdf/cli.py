@@ -1,3 +1,4 @@
+import json
 import os
 
 import click
@@ -38,9 +39,48 @@ def invert_mapping(data_list):
     return inverted_map
 
 
-def init():
+@cli.command()
+@click.option(
+    "-r", "--reinit", is_flag=True, default=False, help="Reinitialize the database."
+)
+@click.option(
+    "-s", "--stats", is_flag=True, default=False, help="Print database statistics."
+)
+def database(reinit, stats):
+    if reinit:
+        init(reinit)
+        return
+
+    if stats:
+        sempdfs = load_data()
+        if not sempdfs:
+            print("No data found.")
+            return
+
+        _stats = {
+            "Number of Documents": len(sempdfs),
+            "Number of Unique Hashes": len(set([sempdf.hash for sempdf in sempdfs])),
+            "Number of Unique Paths": len(
+                set([path for sempdf in sempdfs for path in sempdf.paths])
+            ),
+            "Number of Duplicates": len(
+                [sempdf for sempdf in sempdfs if len(sempdf.paths) > 1]
+            ),
+        }
+
+        print(json.dumps(_stats, indent=4))
+
+
+def init(reinit=False):
+    """Initialize the database.
+
+    Args:
+    - reinit (bool): Whether to reinitialize the database."""
+
+    # Load sempdfs if it exists
     _init = True
-    if os.path.exists(
+    sempdfs = []
+    if not reinit and os.path.exists(
         os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
     ):
         _init = False
@@ -48,6 +88,7 @@ def init():
         print("Loading data from file...")
         sempdfs = load_data()
 
+    # Search for pdf's
     print("Loading file list...")
     file_list = search_pdf_files()
     print("Hashing files...")
@@ -55,8 +96,8 @@ def init():
     print("Inverting hashes map...")
     inverted_hashes_map = invert_mapping(file_hashes)
 
-    paths_updated = False
     # update sempdfs paths
+    paths_updated = False
     for sempdf in sempdfs:
         if sempdf.paths != inverted_hashes_map[sempdf.hash].paths:
             paths_updated = True
@@ -65,9 +106,12 @@ def init():
         print("Updating paths...")
         write_data(sempdfs)
 
+    # Update sempdfs text
     delta_sempdfs = []
     negative_delta_sempdfs = []
+
     if _init:
+        # If we are initializing, then all sempdfs are new
         delta_sempdfs = inverted_hashes_map.values()
     else:
         # What hashes are new?
@@ -116,7 +160,10 @@ def init():
 @click.option(
     "-s", "--skip", is_flag=True, default=False, help="Don't search for new pdfs."
 )
-def search(query, num, skip):
+@click.option(
+    "-r", "--reinit", is_flag=True, default=False, help="Reinitialize the database."
+)
+def search(query, num, skip, reinit):
     """
     Search for the top N closest articles based on a given string.
 
@@ -128,7 +175,7 @@ def search(query, num, skip):
     """
 
     if not skip:
-        init()
+        init(reinit)
     if not os.path.exists(
         os.path.join(config.database_path, constants.INVERTED_HASHES_MAP_FILENAME)
     ):

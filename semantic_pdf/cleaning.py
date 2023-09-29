@@ -1,8 +1,8 @@
+import itertools
 import ssl
 import string
 
 import nltk
-from gensim.models import Word2Vec
 from nltk.corpus import stopwords
 from utils import config
 
@@ -36,6 +36,10 @@ def clean_text(text):
 
     # Remove stopwords
     stop_words = set(stopwords.words("english"))
+
+    # Add math specific stopwords
+    alphabet = string.ascii_lowercase
+    stop_words.update(set(["".join(i) for i in itertools.product(alphabet, repeat=3)]))
     words = [word for word in words if word not in stop_words]
 
     return words
