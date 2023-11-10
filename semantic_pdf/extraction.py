@@ -1,4 +1,5 @@
 import pytesseract
+from tqdm import tqdm
 from mydatabase import SemPdf
 from pdf2image import convert_from_path
 
@@ -18,6 +19,8 @@ def extract_text_from_pdf(pdf_path):
 
 
 def extract_text_for_sempdfs(sempdfs: list[SemPdf]):
-    for sempdf in sempdfs:
+    pbar = tqdm(sempdfs)
+    for sempdf in pbar:
         sempdf.text = extract_text_from_pdf(sempdf.paths[0])
+        pbar.set_description("Processing %s" % sempdf.paths[0].split("/")[-1])
     return sempdfs

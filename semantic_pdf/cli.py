@@ -30,7 +30,8 @@ def invert_mapping(data_list):
     """
     inverted_map = {}
     for path, hash_val in data_list:
-        print(path, hash_val)
+        # 
+        # print(path, hash_val)
         if hash_val not in inverted_map:
             inverted_map[hash_val]: SemPdf = SemPdf(hash=hash_val)
 
@@ -99,7 +100,7 @@ def init(reinit=False):
     # update sempdfs paths
     paths_updated = False
     for sempdf in sempdfs:
-        if sempdf.paths != inverted_hashes_map[sempdf.hash].paths:
+        if sempdf.hash in inverted_hashes_map and sempdf.paths != inverted_hashes_map[sempdf.hash].paths:
             paths_updated = True
             sempdf.paths = inverted_hashes_map[sempdf.hash].paths
     if paths_updated:
